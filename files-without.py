@@ -3,6 +3,9 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import pandas as pd
+from io import BytesIO
+from openpyxl import Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
 
 # Pattern for disallowed prefixes
 disallowed_prefixes = re.compile(r'^(00|01|02|03|04|05|x|X)')
@@ -51,3 +54,22 @@ print(f"\n✅ Done. Results saved to: {output_path}")
 print(f"\n📦 Total matching files found: {len(filtered_results)}")
 print(f"✅ Done. Results saved to: {output_path}")
 
+# Let's assume result_df is your output DataFrame
+output = BytesIO()
+wb = Workbook()
+ws = wb.active
+
+# Convert DataFrame to Excel
+for r in dataframe_to_rows(result_df, index=False, header=True):
+    ws.append(r)
+
+wb.save(output)
+output.seek(0)  # Move pointer back to beginning
+
+# 🎯 Download button
+st.download_button(
+    label="📥 Download Excel",
+    data=output.getvalue(),
+    file_name="upload_check_results.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
