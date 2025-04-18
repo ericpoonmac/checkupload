@@ -8,7 +8,7 @@ import pandas as pd
 disallowed_prefixes = re.compile(r'^(00|01|02|03|04|05|x|X)')
 
 # Load the CSV file
-input_path = "input 50.csv"  # Make sure this file is in your current directory
+input_path = "input.csv"  # Make sure this file is in your current directory
 df = pd.read_csv(input_path)
 
 # Collect valid files
