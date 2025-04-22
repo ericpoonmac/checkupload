@@ -3,19 +3,19 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import pandas as pd
-from io import BytesIO
-from openpyxl import Workbook
-from openpyxl.utils.dataframe import dataframe_to_rows
+from collections import defaultdict
 
 # Pattern for disallowed prefixes
 disallowed_prefixes = re.compile(r'^(00|01|02|03|04|05|x|X)')
 
 # Load the CSV file
-input_path = "input.csv"  # Make sure this file is in your current directory
+input_path = "input.csv"
 df = pd.read_csv(input_path)
 
-# Collect valid files
+# Initialize trackers
+total_files_processed = 0
 filtered_results = []
+results_by_ref = defaultdict(list)
 
 # Process each row in the CSV
 for index, row in df.iterrows():
@@ -31,13 +31,16 @@ for index, row in df.iterrows():
             tag.decompose()
 
         lines = [line.strip() for line in soup.get_text(separator="\n").splitlines() if line.strip()]
-
         found = False
+
         for line in lines:
-            if '.' in line and not disallowed_prefixes.match(line):  # if it's a valid file
-                filtered_results.append({'Ref': ref, 'File': line})
-                print(f"   📄 {line}")
-                found = True
+            if '.' in line:
+                total_files_processed += 1
+                if not disallowed_prefixes.match(line):
+                    filtered_results.append({'Ref': ref, 'File': line})
+                    results_by_ref[ref].append(line)
+                    print(f"   📄 {line}")
+                    found = True
 
         if not found:
             print("   ❗ No matching files found.")
@@ -48,28 +51,18 @@ for index, row in df.iterrows():
 # Export results
 output_path = "files-upload.csv"
 pd.DataFrame(filtered_results).to_csv(output_path, index=False)
-print(f"\n✅ Done. Results saved to: {output_path}")
 
-# ✅ Show summary
-print(f"\n📦 Total matching files found: {len(filtered_results)}")
-print(f"✅ Done. Results saved to: {output_path}")
+# ✅ Summary
+print(f"\n📦 Total files processed: {total_files_processed}")
+print(f"✅ Matching files (not starting with 00–05/x/X): {len(filtered_results)}")
+print(f"📄 Result saved to: {output_path}")
 
-# Let's assume result_df is your output DataFrame
-output = BytesIO()
-wb = Workbook()
-ws = wb.active
-
-# Convert DataFrame to Excel
-for r in dataframe_to_rows(result_df, index=False, header=True):
-    ws.append(r)
-
-wb.save(output)
-output.seek(0)  # Move pointer back to beginning
-
-# 🎯 Download button
-st.download_button(
-    label="📥 Download Excel",
-    data=output.getvalue(),
-    file_name="upload_check_results.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
+# ✅ Display result breakdown by Ref
+print("\n🧾 Matched Files by Ref:")
+if results_by_ref:
+    for ref, files in results_by_ref.items():
+        print(f"🔸 {ref}:")
+        for f in files:
+            print(f"   📄 {f}")
+else:
+    print("❗ No matching files found across all refs.")
